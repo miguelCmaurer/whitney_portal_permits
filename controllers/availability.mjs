@@ -22,7 +22,6 @@ export async function getAvailability() {
       ),
     );
 
-    // Combine payloads from all responses
     const combinedPayload = responses.reduce((acc, data) => {
       return { ...acc, ...data.payload };
     }, {});
@@ -70,8 +69,10 @@ export async function getAvailability() {
 function isReservable(userDates, date, data) {
   if (userDates.includes(date)) {
     if (
-      data.payload[date]["166"] &&
-      data.payload[date]["166"].quota_usage_by_member_daily.remaining > 0
+      (data.payload[date]["166"] &&
+        data.payload[date]["166"].quota_usage_by_member_daily.remaining > 0) ||
+      (data.payload[date]["406"] &&
+        data.payload[date]["406"].quota_usage_by_member_daily.remaining > 0)
     ) {
       return true;
     }
