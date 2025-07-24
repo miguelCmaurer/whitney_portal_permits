@@ -26,8 +26,6 @@ export async function getAvailability() {
       return { ...acc, ...data.payload };
     }, {});
     const userDates = [
-      "2025-07-23",
-      "2025-07-24",
       "2025-07-25",
       "2025-07-26",
       "2025-07-27",
@@ -69,10 +67,8 @@ export async function getAvailability() {
 function isReservable(userDates, date, data) {
   if (userDates.includes(date)) {
     if (
-      (data.payload[date]["166"] &&
-        data.payload[date]["166"].quota_usage_by_member_daily.remaining > 0) ||
-      (data.payload[date]["406"] &&
-        data.payload[date]["406"].quota_usage_by_member_daily.remaining > 0)
+      data.payload[date]["166"] &&
+      data.payload[date]["166"].quota_usage_by_member_daily.remaining > 0
     ) {
       return true;
     }
