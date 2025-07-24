@@ -1,7 +1,9 @@
 import { sendNotification } from "../utility/sendEmail.mjs";
 
-const whitneyPermits =
-  "https://www.recreation.gov/api/permitinyo/445860/availabilityv2?start_date=2025-07-01&end_date=2025-07-31&commercial_acct=false";
+const whitneyPermits = [
+  "https://www.recreation.gov/api/permitinyo/445860/availabilityv2?start_date=2025-07-01&end_date=2025-07-31&commercial_acct=false",
+  "https://www.recreation.gov/api/permitinyo/445860/availabilityv2?start_date=2025-08-01&end_date=2025-08-31&commercial_acct=false",
+];
 
 let lastSent = [];
 
@@ -9,24 +11,48 @@ export async function getAvailability() {
   console.log("getAvailability");
 
   try {
-    const resp = await fetch(whitneyPermits);
-    if (!resp.ok) {
-      console.error(`Failed to fetch permits: ${resp.statusText}`);
-      return false;
-    }
-    const data = await resp.json();
-    const userDates = ["2025-07-23", "2025-07-22", "2025-08-03", "2025-08-04"];
-    const availableDays = [];
+    const responses = await Promise.all(
+      whitneyPermits.map((url) =>
+        fetch(url).then((resp) => {
+          if (!resp.ok) {
+            throw new Error(`Failed to fetch ${url}: ${resp.statusText}`);
+          }
+          return resp.json();
+        }),
+      ),
+    );
 
-    for (const [date, payload] of Object.entries(data.payload)) {
-      if (isReservable(userDates, date, data) && isNew({ [date]: payload })) {
+    // Combine payloads from all responses
+    const combinedPayload = responses.reduce((acc, data) => {
+      return { ...acc, ...data.payload };
+    }, {});
+    const userDates = [
+      "2025-07-23",
+      "2025-07-24",
+      "2025-07-25",
+      "2025-07-26",
+      "2025-07-27",
+      "2025-07-28",
+      "2025-07-29",
+      "2025-07-30",
+      "2025-07-31",
+      "2025-08-01",
+      "2025-08-02",
+      "2025-08-03",
+      "2025-08-04",
+    ];
+    const availableDays = [];
+    for (const [date, payload] of Object.entries(combinedPayload)) {
+      if (
+        isReservable(userDates, date, { payload: combinedPayload }) &&
+        isNew({ [date]: payload })
+      ) {
         availableDays.push({ [date]: payload });
         updateLastSent(date, payload);
       }
     }
 
     if (availableDays.length > 0) {
-      console.log("Sending email: ", availableDays);
       sendNotification(
         "miguelmaurer456@gmail.com",
         "Mt. Whitney portal permits Available",
@@ -45,11 +71,10 @@ function isReservable(userDates, date, data) {
   if (userDates.includes(date)) {
     if (
       data.payload[date]["166"] &&
-      data.payload[date]["166"].quota_usage_by_member_daily.remaining > 1
+      data.payload[date]["166"].quota_usage_by_member_daily.remaining > 0
     ) {
       return true;
     }
-    return true;
   }
   return false;
 }
